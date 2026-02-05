@@ -1100,27 +1100,49 @@
 
     function setupDoubleTap() {
       canvas.onclick = null; canvas.ontouchstart = null;
-      canvas.addEventListener('click', handleDoubleTap);
-      canvas.addEventListener('touchstart', function (e) { e.preventDefault(); handleDoubleTap(e); }, { passive: false });
+
+      // Handle Mouse Clicks (Desktop)
+      canvas.addEventListener('click', (e) => {
+        // Ignore clicks derived from touch events
+        if (Date.now() - lastTouchTime < 500) return;
+        handleDoubleTap(e);
+      });
+
+      // Handle Touch Events (Mobile)
+      canvas.addEventListener('touchstart', function (e) {
+        // We prevent default to stop ghost clicks, but we verify this doesn't break look-controls
+        // A-Frame controls bind to window or canvas, so we must be careful.
+        // Usually preventing default on touchstart stops scroll, which is desired here.
+        // e.preventDefault(); 
+        lastTouchTime = Date.now();
+        handleDoubleTap(e);
+      }, { passive: false });
     }
+
+    let lastTouchTime = 0;
 
     function handleDoubleTap(event) {
       if (isNavigating) return;
+
       const currentTime = Date.now();
       const timeDiff = currentTime - lastTapTime;
 
-      if (timeDiff < DOUBLE_TAP_DELAY && timeDiff > 0) {
-        lastTapTime = 0;
+      // Strict double tap timing (50ms to 300ms)
+      if (timeDiff < 300 && timeDiff > 50) {
+        lastTapTime = 0; // Reset
         if (currentAlignedTarget) {
-          showInstruction("Going to " + currentAlignedTarget);
+          showInstruction("Taking you to " + currentAlignedTarget);
           loadNode(currentAlignedTarget);
         } else {
           showInstruction("Point arrow at a navigation point first");
         }
       } else {
         lastTapTime = currentTime;
-        if (currentAlignedTarget) showInstruction("Double-tap to go to " + currentAlignedTarget);
-        else showInstruction("Move cursor to align with a navigation point");
+        // Only show hint on first tap if target aligned
+        if (currentAlignedTarget) {
+          // Optional: slight feedback or hint
+          // showInstruction("Double-tap to go");
+        }
       }
     }
 
